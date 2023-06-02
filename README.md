@@ -24,6 +24,12 @@ DISCLAIMER: I tried various methods of detecting the text cursor locations
 but it seems like none of the methods work reliably in 2023.
 If you know how to detect the text cursor screen location, please let me know.
 
+## Screencasts
+
+[![Light Theme](https://img.youtube.com/vi/XJppp_UX2UE/0.jpg)](https://youtu.be/XJppp_UX2UE)
+
+[![Dark Theme](https://img.youtube.com/vi/KtnMjfMwhkc/0.jpg)](https://youtu.be/KtnMjfMwhkc)
+
 ## Installing
 
 Either method requires enabling the app in the System Settings Accessibility list.
