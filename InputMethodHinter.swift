@@ -24,10 +24,7 @@ var BG2 = NSColor.windowBackgroundColor
 var BG3 = NSColor.selectedTextBackgroundColor
 
 func drawText(_ image: NSImage, _ text: String) -> NSImage {
-    let font = NSFont.monospacedSystemFont(ofSize: image.size.height*3/4, weight: .medium)
-    let fontBold = NSFont.monospacedSystemFont(ofSize: image.size.height*3/4, weight: .black)
-    let imageRect = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
-    let textRect = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
+    let font = NSFont.systemFont(ofSize: image.size.height*3/4, weight: .medium)
     let textStyle = NSParagraphStyle().mutableCopy() as! NSMutableParagraphStyle
     textStyle.alignment = .center
     textStyle.lineBreakMode = .byClipping
@@ -41,8 +38,8 @@ func drawText(_ image: NSImage, _ text: String) -> NSImage {
         NSAttributedString.Key.paragraphStyle: textStyle,
         NSAttributedString.Key.shadow: shadow
     ]
-    let textFontAttributesBold = [
-        NSAttributedString.Key.font: fontBold,
+    let textFontAttributesBg = [
+        NSAttributedString.Key.font: font,
         NSAttributedString.Key.foregroundColor: BG.withAlphaComponent(0.8),
         NSAttributedString.Key.paragraphStyle: textStyle
     ]
@@ -60,10 +57,14 @@ func drawText(_ image: NSImage, _ text: String) -> NSImage {
         bitsPerPixel: 0)!
     im.addRepresentation(rep)
     im.lockFocus()
-    image.draw(in: imageRect)
-    text.draw(in: textRect, withAttributes: textFontAttributesBold)
-    text.draw(in: textRect, withAttributes: textFontAttributes)
+    image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
+    text.draw(in: CGRect(x: 0, y: -1, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x: 0, y:  1, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x: -1, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x:  1, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributes)
     im.unlockFocus()
+    // TODO: dynamic window size: https://developer.apple.com/documentation/foundation/nsstring/1531844-size
     return im
 }
 
@@ -150,11 +151,6 @@ statusBarItem.menu = menu
 // aboutMenuItem.target = about
 // menu.addItem(aboutMenuItem)
 
-let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
-menu.addItem(quitMenuItem)
-
-menu.addItem(NSMenuItem.separator())
-
 //// Using "About" menu item instead of proper dialog window.
 class About { @objc func action() {
     guard let url = URL(string: "https://github.com/ershov/InputMethodHinter") else { return }
@@ -182,6 +178,13 @@ about2MenuItem.attributedTitle = try! NSAttributedString(
     ],
     documentAttributes: &dict)
 menu.addItem(about2MenuItem)
+
+menu.addItem(NSMenuItem.separator())
+
+let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+menu.addItem(quitMenuItem)
+
+
 
 // https://github.com/ghawkgu/isHUD/blob/master/isHUD/ISHKeyCode.h
 var inputMethod = ""

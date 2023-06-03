@@ -5,9 +5,8 @@
 .ccls-cache
 
 InputMethodHinter-console
-InputMethodHinter-app
-*-arm64
-*-x86_64
-
-InputMethodHinter.app/Contents/MacOS/InputMethodHinter*
-InputMethodHinter.app/Contents/_CodeSignature/**
+InputMethodHinter-console--*
+InputMethodHinter-launch
+InputMethodHinter-launch--*
+InputMethodHinter.zip
+InputMethodHinter.app/**

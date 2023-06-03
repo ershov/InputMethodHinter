@@ -1,45 +1,50 @@
-BINARIES=InputMethodHinter-console InputMethodHinter-app
+BINARIES=InputMethodHinter-console InputMethodHinter-launch
 
-all: $(BINARIES) app
+X86_TARGET=x86_64-apple-macos10.11
+ARM_TARGET=arm64-apple-macos10.15
+
+all: $(BINARIES) app zip
 
 # https://stackoverflow.com/questions/71084674/hot-to-compile-a-swift-script-to-a-universal-binary
 
 InputMethodHinter-console: InputMethodHinter.swift
-	swiftc $< -target x86_64-apple-macos10.15 -o $@-x86_64
-	xattr -cr . ; codesign -fs codesign $@-x86_64
-	swiftc $< -target arm64-apple-macos10.15 -o $@-arm64
-	xattr -cr . ; codesign -fs codesign $@-arm64
-	lipo -create $@-x86_64 $@-arm64 -output $@
+	swiftc $< -target $(X86_TARGET) -o $@--$(X86_TARGET)
+	xattr -cr . ; codesign -fs codesign $@--$(X86_TARGET)
+	swiftc $< -target $(ARM_TARGET) -o $@--$(ARM_TARGET)
+	xattr -cr . ; codesign -fs codesign $@--$(ARM_TARGET)
+	lipo -create $@--$(X86_TARGET) $@--$(ARM_TARGET) -output $@
 	xattr -cr . ; codesign -fs codesign $@
 
-InputMethodHinter-app: InputMethodHinter-launch.c
-	$(CC) -o3 $< -target x86_64-apple-macos10.15 -o InputMethodHinter-app-x86_64
-	xattr -cr . ; codesign -fs codesign $@-x86_64
-	$(CC) -o3 $< -target arm64-apple-macos10.15 -o InputMethodHinter-app-arm64
-	xattr -cr . ; codesign -fs codesign $@-arm64
-	lipo -create $@-x86_64 $@-arm64 -output $@
+InputMethodHinter-launch: InputMethodHinter-launch.c
+	$(CC) -o3 $< -target $(X86_TARGET) -o $@--$(X86_TARGET)
+	xattr -cr . ; codesign -fs codesign $@--$(X86_TARGET)
+	$(CC) -o3 $< -target $(ARM_TARGET) -o $@--$(ARM_TARGET)
+	xattr -cr . ; codesign -fs codesign $@--$(ARM_TARGET)
+	lipo -create $@--$(X86_TARGET) $@--$(ARM_TARGET) -output $@
 	xattr -cr . ; codesign -fs codesign $@
 
 # https://stackoverflow.com/questions/1596945/building-osx-app-bundle
 # https://stackoverflow.com/questions/27474751/how-can-i-codesign-an-app-without-being-in-the-mac-developer-program
 
-InputMethodHinter.app: $(BINARIES)
+app: $(BINARIES)
+	rm -rf InputMethodHinter.app
+	cp -a InputMethodHinter.app-template InputMethodHinter.app
 	mkdir -p InputMethodHinter.app/Contents/{Resources,MacOS}
 	cp $(BINARIES) InputMethodHinter.app/Contents/MacOS/
-	#ln -s InputMethodHinter-app InputMethodHinter.app/Contents/MacOS/InputMethodHinter
-	cp InputMethodHinter-app InputMethodHinter.app/Contents/MacOS/InputMethodHinter
+	#ln -s InputMethodHinter-launch InputMethodHinter.app/Contents/MacOS/InputMethodHinter
+	cp InputMethodHinter-launch InputMethodHinter.app/Contents/MacOS/InputMethodHinter
 	xattr -cr .
-	codesign -fs codesign --deep InputMethodHinter.app
-	codesign -dvv --req - InputMethodHinter.app
+	codesign -fs codesign InputMethodHinter.app  # --deep?
+	#codesign -dvv --req - InputMethodHinter.app
 
-app: InputMethodHinter.app
+zip: app
+	rm -f InputMethodHinter.zip; zip -qr InputMethodHinter.zip InputMethodHinter.app
 
 clean:
-	rm -f \
+	rm -rf \
 		$(BINARIES) \
-		InputMethodHinter-{console,app}-{x86_64,arm64} \
-		InputMethodHinter.app/Contents/MacOS/InputMethodHinter* \
+		InputMethodHinter-{console,launch}--* \
+		InputMethodHinter.app \
 		.ccls-cache
 
-.PHONY: all clean app
-
+.PHONY: all clean app zip
