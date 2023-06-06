@@ -185,23 +185,52 @@ menu.addItem(NSMenuItem.separator())
 let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
 menu.addItem(quitMenuItem)
 
-let animationDuration = 1.5
+let animationDurationHold = 0.5
+let animationDurationFade = 1.5
 
-var timer : DispatchSourceTimer?
-func startDeferredWindowActionTimes() {
-    cancelDeferredWindowActionTimes()
-    timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-    guard let timer = timer else { return }
+var animTimer : DispatchSourceTimer?
+func setTimeout(_ delay: Double, _ closure: @escaping () -> Void) {
+    cancelTimeout()
+    animTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+    guard let timer = animTimer else { animTimer = nil; return }
     timer.setEventHandler {
-        window.center()
-        cancelDeferredWindowActionTimes()
+        closure()
+        cancelTimeout()
     }
-    timer.schedule(deadline: .now() + animationDuration, repeating: .never)
+    timer.schedule(deadline: .now() + delay, repeating: .never)
     timer.resume()
 }
-func cancelDeferredWindowActionTimes() {
-    timer?.cancel()
-    timer = nil
+func cancelTimeout() {
+    animTimer?.cancel()
+    animTimer = nil
+}
+
+func animateWindow1() {
+    setTimeout(animationDurationHold) {
+        window.alphaValue = 1.0
+        NSAnimationContext.beginGrouping()
+        NSAnimationContext.current.duration = animationDurationFade
+        window.animator().alphaValue = 0
+        NSAnimationContext.endGrouping()
+        animateWindow2()
+    }
+}
+func animateWindow2() {
+    setTimeout(animationDurationFade) {
+        window.center()
+        cancelTimeout()
+    }
+}
+
+func animateWindow() {
+    window.alphaValue = 1.0
+    animateWindow1()
+}
+
+extension NSEvent {
+    func isKeyboardEvent() -> Bool {
+        return self.type == .keyDown || self.type == .keyUp || self.type == .flagsChanged
+    }
 }
 
 // https://github.com/ghawkgu/isHUD/blob/master/isHUD/ISHKeyCode.h
@@ -235,12 +264,29 @@ func onEvent(_ event: NSEvent) {
             if lastActiveWindow == activeWindow { return }
         }
 
-        var pos = getNextWindowPos()
-        pos.x += 10.0
-        pos.y += CGFloat(height/2)
-        // pos.x -= CGFloat(width/2)
-        // pos.y -= CGFloat(height/2)
-        window.setFrameOrigin(cocoaScreenPoint(fromCarbonScreenPoint: pos))
+        let pos = {() -> NSPoint in
+            if event.isKeyboardEvent(), let winPos = getActiveWindowCoord() {
+                return NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2)
+            } else {
+                var pos = getNextWindowPos()
+                pos.x += 10.0
+                pos.y += CGFloat(height/2)
+                return cocoaScreenPoint(fromCarbonScreenPoint: pos)
+            }
+        }()
+        window.setFrameOrigin(pos)
+
+        // if let winPos = getActiveWindowCoord() {
+        //     window.setFrameOrigin(NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2))
+        //     window.alphaValue = 1.0
+        // } else {
+        //     var pos = getNextWindowPos()
+        //     pos.x += 10.0
+        //     pos.y += CGFloat(height/2)
+        //     // pos.x -= CGFloat(width/2)
+        //     // pos.y -= CGFloat(height/2)
+        //     window.setFrameOrigin(cocoaScreenPoint(fromCarbonScreenPoint: pos))
+        // }
 
         let image1 = NSImage(
             size:NSMakeSize(CGFloat(width), CGFloat(height)),
@@ -255,13 +301,7 @@ func onEvent(_ event: NSEvent) {
         let image2 = drawText(image1, inputMethod)
         window.backgroundColor = NSColor(patternImage: image2)
 
-        window.alphaValue = 1.0
-        NSAnimationContext.beginGrouping()
-        NSAnimationContext.current.duration = animationDuration
-        window.animator().alphaValue = 0
-        NSAnimationContext.endGrouping()
-
-        startDeferredWindowActionTimes()
+        animateWindow()
     }
 }
 
@@ -333,5 +373,27 @@ func getAXUIElementAttributeValue(_ element: AnyObject?, _ attribute: String) ->
 func cocoaScreenPoint(fromCarbonScreenPoint carbonPoint: NSPoint) -> NSPoint {
     return NSPoint(x: carbonPoint.x, y: (NSScreen.screens.first?.frame.size.height ?? 0) - carbonPoint.y)
     // return NSPoint(x: carbonPoint.x, y: (NSScreen.main?.frame.size.height ?? 0) - carbonPoint.y)
+}
+
+func cocoaScreenRect(fromCarbonScreenRect carbonPoint: CGRect) -> NSRect {
+    return NSRect(
+        x: carbonPoint.origin.x,
+        y: (NSScreen.screens.first?.frame.size.height ?? 0) - carbonPoint.origin.y - carbonPoint.size.height,
+        width: carbonPoint.size.width,
+        height: carbonPoint.size.height)
+}
+
+func getActiveWindowCoord() -> NSPoint? {
+    guard let application = getFrontMostApp() else { return nil }
+    let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
+    let windowsListInfo = CGWindowListCopyWindowInfo(options, CGWindowID(0))
+    let infoList = windowsListInfo as! [[String:Any]]
+    let visibleWindows = infoList.filter {
+        $0["kCGWindowLayer"] as! Int == 0 &&
+        $0["kCGWindowOwnerPID"] as! Int == application.processIdentifier }
+    if visibleWindows.count == 0 { return nil }
+    var bounds = CGRect()
+    if !CGRectMakeWithDictionaryRepresentation(visibleWindows[0]["kCGWindowBounds"] as! CFDictionary, &bounds) { return nil }
+    return cocoaScreenPoint(fromCarbonScreenPoint: NSPoint(x: bounds.midX, y: bounds.midY))
 }
 
