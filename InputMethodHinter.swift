@@ -96,6 +96,7 @@ window.setContentSize(size)
 // window.maxSize = size
 let mouse = NSEvent.mouseLocation
 window.setFrame(CGRect(x: Int(mouse.x)-width, y: Int(mouse.y) - height/2, width: width, height: height), display: true)
+window.center()
 window.makeKeyAndOrderFront(nil)
 
 window.backgroundColor = NSColor(
@@ -184,7 +185,24 @@ menu.addItem(NSMenuItem.separator())
 let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
 menu.addItem(quitMenuItem)
 
+let animationDuration = 1.5
 
+var timer : DispatchSourceTimer?
+func startDeferredWindowActionTimes() {
+    cancelDeferredWindowActionTimes()
+    timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+    guard let timer = timer else { return }
+    timer.setEventHandler {
+        window.center()
+        cancelDeferredWindowActionTimes()
+    }
+    timer.schedule(deadline: .now() + animationDuration, repeating: .never)
+    timer.resume()
+}
+func cancelDeferredWindowActionTimes() {
+    timer?.cancel()
+    timer = nil
+}
 
 // https://github.com/ghawkgu/isHUD/blob/master/isHUD/ISHKeyCode.h
 var inputMethod = ""
@@ -239,9 +257,11 @@ func onEvent(_ event: NSEvent) {
 
         window.alphaValue = 1.0
         NSAnimationContext.beginGrouping()
-        NSAnimationContext.current.duration = 1.5
+        NSAnimationContext.current.duration = animationDuration
         window.animator().alphaValue = 0
         NSAnimationContext.endGrouping()
+
+        startDeferredWindowActionTimes()
     }
 }
 
