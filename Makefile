@@ -29,11 +29,16 @@ InputMethodHinter-launch: InputMethodHinter-launch.c
 app: $(BINARIES)
 	rm -rf InputMethodHinter.app
 	cp -a InputMethodHinter.app-template InputMethodHinter.app
-	mkdir -p InputMethodHinter.app/Contents/{Resources,MacOS}
+	mkdir -p InputMethodHinter.app/Contents/{Resources,MacOS,Frameworks}
 	cp $(BINARIES) InputMethodHinter.app/Contents/MacOS/
 	#ln -s InputMethodHinter-launch InputMethodHinter.app/Contents/MacOS/InputMethodHinter
 	cp InputMethodHinter-launch InputMethodHinter.app/Contents/MacOS/InputMethodHinter
+	#install_name_tool -add_rpath "@executable_path" InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console
+	install_name_tool -add_rpath "@loader_path" InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console
+	cp /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/macosx/* InputMethodHinter.app/Contents/MacOS/
+	cp /Library/Developer/CommandLineTools/usr/lib/swift-5.0/macosx/* InputMethodHinter.app/Contents/MacOS/
 	xattr -cr .
+	codesign -fs codesign --deep InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console  # have to do it after adding rpath
 	codesign -fs codesign InputMethodHinter.app  # --deep?
 	#codesign -dvv --req - InputMethodHinter.app
 
@@ -45,6 +50,7 @@ clean:
 		$(BINARIES) \
 		InputMethodHinter-{console,launch}--* \
 		InputMethodHinter.app \
-		.ccls-cache
+		.ccls-cache \
+		#
 
 .PHONY: all clean app zip
