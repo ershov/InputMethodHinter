@@ -168,7 +168,7 @@ let aboutHtml = """
     <p>MacOS Input Method Hinter</p>
     <p>© 2023 by Yury Ershov</p>
     <p><a href='https://github.com/ershov/InputMethodHinter'>https://github.com/ershov/InputMethodHinter</a></p>
-    <p>Version 0.1</p>
+    <p>Version 0.2</p>
     """
 var dict: NSDictionary? = NSMutableDictionary()
 about2MenuItem.attributedTitle = try! NSAttributedString(
