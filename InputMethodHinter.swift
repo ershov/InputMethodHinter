@@ -70,8 +70,9 @@ func drawText(_ image: NSImage, _ text: String) -> NSImage {
 
 let window = NSWindow()
 
-let width = 100  // 40
-let height = 30
+let windowSize = 0.025
+let height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
+let width = height * 3
 let size = NSMakeSize(CGFloat(width), CGFloat(height))
 
 window.styleMask.insert(.fullSizeContentView)
@@ -195,7 +196,6 @@ func setTimeout(_ delay: Double, _ closure: @escaping () -> Void) {
     guard let timer = animTimer else { animTimer = nil; return }
     timer.setEventHandler {
         closure()
-        cancelTimeout()
     }
     timer.schedule(deadline: .now() + delay, repeating: .never)
     timer.resume()
@@ -275,18 +275,6 @@ func onEvent(_ event: NSEvent) {
             }
         }()
         window.setFrameOrigin(pos)
-
-        // if let winPos = getActiveWindowCoord() {
-        //     window.setFrameOrigin(NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2))
-        //     window.alphaValue = 1.0
-        // } else {
-        //     var pos = getNextWindowPos()
-        //     pos.x += 10.0
-        //     pos.y += CGFloat(height/2)
-        //     // pos.x -= CGFloat(width/2)
-        //     // pos.y -= CGFloat(height/2)
-        //     window.setFrameOrigin(cocoaScreenPoint(fromCarbonScreenPoint: pos))
-        // }
 
         let image1 = NSImage(
             size:NSMakeSize(CGFloat(width), CGFloat(height)),
