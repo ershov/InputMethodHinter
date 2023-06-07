@@ -64,10 +64,10 @@ func genIndicationImage(_ inputMethod: String) -> NSImage {
     var image = NSImage(
         size:NSMakeSize(CGFloat(width), CGFloat(height)),
         flipped: false,
-        drawingHandler: { (NSRect) -> Bool in
+        drawingHandler: { (_ rect: NSRect) -> Bool in
             let context = NSGraphicsContext.current?.cgContext
-            context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
-            context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            context?.setFillColor(.clear)
+            context?.fill(rect)
             return true
         }
     )
