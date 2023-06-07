@@ -37,6 +37,7 @@ app: $(BINARIES)
 	install_name_tool -add_rpath "@loader_path" InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console
 	cp /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/macosx/* InputMethodHinter.app/Contents/MacOS/
 	cp /Library/Developer/CommandLineTools/usr/lib/swift-5.0/macosx/* InputMethodHinter.app/Contents/MacOS/
+	./make-icon.sh
 	xattr -cr .
 	codesign -fs codesign --deep InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console  # have to do it after adding rpath
 	codesign -fs codesign InputMethodHinter.app  # --deep?
@@ -51,6 +52,7 @@ clean:
 		InputMethodHinter-{console,launch}--* \
 		InputMethodHinter.app \
 		.ccls-cache \
+		icon.iconset \
 		#
 
 .PHONY: all clean app zip
