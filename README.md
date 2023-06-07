@@ -2,10 +2,7 @@
 
 Hint the current input method where and when you need it.
 
-<!--![Logo](https://upload.wikimedia.org/wikipedia/commons/4/4e/%E6%96%87-order.gif)-->
-<!--![Logo](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/%E6%96%87-order.gif/120px-%E6%96%87-order.gif)-->
-<!--![Logo](https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/OOjs_UI_icon_language-ltr.svg/240px-OOjs_UI_icon_language-ltr.svg.png)-->
-![Logo](https://gist.githubusercontent.com/ershov/2c8d9506311dc19e06a11984751034da/raw/ab213128e2d7b780f67e835c7e3bfcfc58a95c4d/img-logo.svg)
+![Logo](logo.svg)
 
 ## Problem Statement
 
