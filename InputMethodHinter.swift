@@ -7,6 +7,8 @@ import Cocoa
 
 import SwiftUI
 
+let version = "0.2"
+
 let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: false as NSNumber]
 let accessibilityEnabled = AXIsProcessTrusted() || AXIsProcessTrustedWithOptions(options)
 if !accessibilityEnabled {
@@ -23,8 +25,79 @@ var BG = NSColor.textBackgroundColor
 var BG2 = NSColor.windowBackgroundColor
 var BG3 = NSColor.selectedTextBackgroundColor
 
+var windowSize = 0.05
+var height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
+var width = height * 4
+var size = NSMakeSize(CGFloat(width), CGFloat(height))
+var isBigWindow = true
+let greetText = "文    Input Method Hinter"
+
+func setBigWindow() {
+    isBigWindow = true
+    windowSize = 0.05
+    height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
+    width = height * 4 / 3
+    size = NSMakeSize(CGFloat(width), CGFloat(height))
+    window.setContentSize(size)
+    FG = NSColor.white
+    BG = NSColor.black
+    BG2 = NSColor.windowBackgroundColor
+    BG3 = NSColor.selectedTextBackgroundColor
+    animationDurationHold = 0.1
+}
+
+func setSmallWindow() {
+    isBigWindow = false
+    windowSize = 0.025
+    height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
+    width = height * 3
+    size = NSMakeSize(CGFloat(width), CGFloat(height))
+    window.setContentSize(size)
+    FG = NSColor.textColor
+    BG = NSColor.textBackgroundColor
+    BG2 = NSColor.windowBackgroundColor
+    BG3 = NSColor.selectedTextBackgroundColor
+    animationDurationHold = 0.5
+}
+
+func genIndicationImage(_ inputMethod: String) -> NSImage {
+    if isBigWindow {
+        var image1 = NSImage(
+            size:NSMakeSize(CGFloat(width), CGFloat(height)),
+            flipped: false,
+            drawingHandler: { (NSRect) -> Bool in
+                let context = NSGraphicsContext.current?.cgContext
+                context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
+                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                return true
+            }
+        )
+        if let flag = im2icon[getCurrentInputSourceId()] {
+            image1 = drawIcon(image1, flag)
+        }
+        let image2 = drawText(image1, inputMethod)
+        return image2
+    } else {
+        let image1 = NSImage(
+            size:NSMakeSize(CGFloat(width), CGFloat(height)),
+            flipped: false,
+            drawingHandler: { (NSRect) -> Bool in
+                let context = NSGraphicsContext.current?.cgContext
+                context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
+                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                return true
+            }
+        )
+        let flag = im2icon[getCurrentInputSourceId()] ?? ""
+        let image2 = drawText(image1, flag + inputMethod)
+        return image2
+    }
+}
+
 func drawText(_ image: NSImage, _ text: String) -> NSImage {
-    let font = NSFont.systemFont(ofSize: image.size.height*3/4, weight: .medium)
+    let fontSize = isBigWindow ? image.size.height*3/10 : image.size.height*3/4
+    let font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
+    let textPos = isBigWindow ? image.size.height/2 - font.pointSize*4/3 : 0
     let textStyle = NSParagraphStyle().mutableCopy() as! NSMutableParagraphStyle
     textStyle.alignment = .center
     textStyle.lineBreakMode = .byClipping
@@ -58,22 +131,58 @@ func drawText(_ image: NSImage, _ text: String) -> NSImage {
     im.addRepresentation(rep)
     im.lockFocus()
     image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
-    text.draw(in: CGRect(x: 0, y: -1, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x: 0, y:  1, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x: -1, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x:  1, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height), withAttributes: textFontAttributes)
+    let txDrawHeight = isBigWindow ? font.pointSize*2 : image.size.height
+    text.draw(in: CGRect(x:  0, y: textPos-1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x:  0, y: textPos+1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x: -1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x:  1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+    text.draw(in: CGRect(x:  0, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributes)
     im.unlockFocus()
     // TODO: dynamic window size: https://developer.apple.com/documentation/foundation/nsstring/1531844-size
     return im
 }
 
-let window = NSWindow()
+func drawIcon(_ image: NSImage, _ text: String) -> NSImage {
+    let font = NSFont.systemFont(ofSize: image.size.height*3/2, weight: .black)
+    let textStyle = NSParagraphStyle().mutableCopy() as! NSMutableParagraphStyle
+    textStyle.alignment = .center
+    textStyle.lineBreakMode = .byClipping
+    let shadow = NSShadow()
+    shadow.shadowOffset = NSMakeSize(0, 0)
+    shadow.shadowBlurRadius = image.size.height/20
+    shadow.shadowColor = BG
+    let textFontAttributes = [
+        NSAttributedString.Key.font: font,
+        NSAttributedString.Key.foregroundColor: FG,
+        NSAttributedString.Key.paragraphStyle: textStyle,
+        NSAttributedString.Key.shadow: shadow
+    ]
+    let im : NSImage = NSImage(size: image.size)
+    let rep : NSBitmapImageRep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: Int(image.size.width),
+        pixelsHigh: Int(image.size.height),
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: NSColorSpaceName.calibratedRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0)!
+    im.addRepresentation(rep)
+    im.lockFocus()
+    image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
+    text.draw(in: CGRect(
+        x: -image.size.height/4,
+        y: -image.size.height*0.4,
+        width: image.size.width + image.size.height*2/4,
+        height: image.size.height + image.size.height*2*0.4),
+        withAttributes: textFontAttributes)
+    im.unlockFocus()
+    return im
+}
 
-let windowSize = 0.025
-let height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
-let width = height * 3
-let size = NSMakeSize(CGFloat(width), CGFloat(height))
+let window = NSWindow()
 
 window.styleMask.insert(.fullSizeContentView)
 window.styleMask.insert(.borderless)
@@ -110,7 +219,7 @@ window.backgroundColor = NSColor(
                 context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
                 return true
             }
-        ), "abc文яфж"))
+        ), greetText))
 // Make it like a splash screen at startup
 window.alphaValue = 1.0
 NSAnimationContext.beginGrouping()
@@ -169,7 +278,7 @@ let aboutHtml = """
     <p>MacOS Input Method Hinter</p>
     <p>© 2023 by Yury Ershov</p>
     <p><a href='https://github.com/ershov/InputMethodHinter'>https://github.com/ershov/InputMethodHinter</a></p>
-    <p>Version 0.2</p>
+    <p>Version \(version)</p>
     """
 var dict: NSDictionary? = NSMutableDictionary()
 about2MenuItem.attributedTitle = try! NSAttributedString(
@@ -186,7 +295,7 @@ menu.addItem(NSMenuItem.separator())
 let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
 menu.addItem(quitMenuItem)
 
-let animationDurationHold = 0.5
+var animationDurationHold = 0.5
 let animationDurationFade = 1.5
 
 var animTimer : DispatchSourceTimer?
@@ -264,6 +373,12 @@ func onEvent(_ event: NSEvent) {
             if lastActiveWindow == activeWindow { return }
         }
 
+        if event.isKeyboardEvent() {
+            setBigWindow()
+        } else {
+            setSmallWindow()
+        }
+
         let pos = {() -> NSPoint in
             if event.isKeyboardEvent(), let winPos = getActiveWindowCoord() {
                 return NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2)
@@ -274,21 +389,10 @@ func onEvent(_ event: NSEvent) {
                 return cocoaScreenPoint(fromCarbonScreenPoint: pos)
             }
         }()
-        window.setFrameOrigin(pos)
+        //window.setFrameOrigin(pos)
+        window.setFrame(NSRect(x: Int(pos.x), y: Int(pos.y), width: width, height: height), display: true)
 
-        let image1 = NSImage(
-            size:NSMakeSize(CGFloat(width), CGFloat(height)),
-            flipped: false,
-            drawingHandler: { (NSRect) -> Bool in
-                let context = NSGraphicsContext.current?.cgContext
-                context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
-                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
-                return true
-            }
-        )
-        let flag = im2icon[getCurrentInputSourceId()] ?? ""
-        let image2 = drawText(image1, flag+inputMethod)
-        window.backgroundColor = NSColor(patternImage: image2)
+        window.backgroundColor = NSColor(patternImage: genIndicationImage(inputMethod))
 
         animateWindow()
     }
