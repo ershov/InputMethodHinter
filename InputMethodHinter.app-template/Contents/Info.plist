@@ -13,7 +13,7 @@
   <key>CFBundleIconFile</key>
   <string>InputMethodHinter.icns</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2</string>
+  <string>0.3</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -21,6 +21,6 @@
   <key>IFMajorVersion</key>
   <integer>0</integer>
   <key>IFMinorVersion</key>
-  <integer>2</integer>
+  <integer>3</integer>
 </dict>
 </plist>
