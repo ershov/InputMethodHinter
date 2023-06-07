@@ -7,7 +7,7 @@ import Cocoa
 
 import SwiftUI
 
-let version = "0.3"
+let version = "0.3.1"
 
 let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: false as NSNumber]
 let accessibilityEnabled = AXIsProcessTrusted() || AXIsProcessTrustedWithOptions(options)
