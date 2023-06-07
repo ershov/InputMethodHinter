@@ -61,37 +61,25 @@ func setSmallWindow() {
 }
 
 func genIndicationImage(_ inputMethod: String) -> NSImage {
-    if isBigWindow {
-        var image1 = NSImage(
-            size:NSMakeSize(CGFloat(width), CGFloat(height)),
-            flipped: false,
-            drawingHandler: { (NSRect) -> Bool in
-                let context = NSGraphicsContext.current?.cgContext
-                context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
-                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
-                return true
-            }
-        )
-        if let flag = im2icon[getCurrentInputSourceId()] {
-            image1 = drawOverImg(image1, flag, isIcon: true)
+    var image = NSImage(
+        size:NSMakeSize(CGFloat(width), CGFloat(height)),
+        flipped: false,
+        drawingHandler: { (NSRect) -> Bool in
+            let context = NSGraphicsContext.current?.cgContext
+            context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
+            context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            return true
         }
-        let image2 = drawOverImg(image1, inputMethod)
-        return image2
-    } else {
-        let image1 = NSImage(
-            size:NSMakeSize(CGFloat(width), CGFloat(height)),
-            flipped: false,
-            drawingHandler: { (NSRect) -> Bool in
-                let context = NSGraphicsContext.current?.cgContext
-                context?.setFillColor(BG2.withAlphaComponent(0.2).cgColor)
-                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
-                return true
-            }
-        )
-        let flag = im2icon[getCurrentInputSourceId()] ?? ""
-        let image2 = drawOverImg(image1, flag + inputMethod)
-        return image2
+    )
+    var text = inputMethod
+    if let imicon = im2icon[getCurrentInputSourceId()] {
+        if isBigWindow {
+            image = drawOverImg(image, imicon, isIcon: true)
+        } else {
+            text = imicon + text
+        }
     }
+    return drawOverImg(image, text)
 }
 
 func drawOverImg(_ image: NSImage, _ text: String, isIcon: Bool = false) -> NSImage {
