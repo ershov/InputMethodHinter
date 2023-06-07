@@ -27,10 +27,10 @@ var BG3 = NSColor.selectedTextBackgroundColor
 
 var windowSize = 0.05
 var height = Int((NSScreen.screens.first?.frame.size.height ?? 1666) * windowSize)
-var width = height * 4
+var width = height * 5
 var size = NSMakeSize(CGFloat(width), CGFloat(height))
 var isBigWindow = true
-let greetText = "文    Input Method Hinter"
+let greetText = "文    Input Method Hinter   Ж"
 
 func setBigWindow() {
     isBigWindow = true
@@ -73,9 +73,9 @@ func genIndicationImage(_ inputMethod: String) -> NSImage {
             }
         )
         if let flag = im2icon[getCurrentInputSourceId()] {
-            image1 = drawIcon(image1, flag)
+            image1 = drawOverImg(image1, flag, isIcon: true)
         }
-        let image2 = drawText(image1, inputMethod)
+        let image2 = drawOverImg(image1, inputMethod)
         return image2
     } else {
         let image1 = NSImage(
@@ -89,15 +89,18 @@ func genIndicationImage(_ inputMethod: String) -> NSImage {
             }
         )
         let flag = im2icon[getCurrentInputSourceId()] ?? ""
-        let image2 = drawText(image1, flag + inputMethod)
+        let image2 = drawOverImg(image1, flag + inputMethod)
         return image2
     }
 }
 
-func drawText(_ image: NSImage, _ text: String) -> NSImage {
-    let fontSize = isBigWindow ? image.size.height*3/10 : image.size.height*3/4
-    let font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
-    let textPos = isBigWindow ? image.size.height/2 - font.pointSize*4/3 : 0
+func drawOverImg(_ image: NSImage, _ text: String, isIcon: Bool = false) -> NSImage {
+    let fontSize = isIcon ?
+        image.size.height*3/2 :
+        isBigWindow ? image.size.height*3/10 : image.size.height*3/4
+    let fonWeight = isIcon ? NSFont.Weight.black : NSFont.Weight.medium
+    let font = NSFont.systemFont(ofSize: fontSize, weight: fonWeight)
+    let textPos = isBigWindow && !isIcon ? image.size.height/2 - font.pointSize*4/3 : 0
     let textStyle = NSParagraphStyle().mutableCopy() as! NSMutableParagraphStyle
     textStyle.alignment = .center
     textStyle.lineBreakMode = .byClipping
@@ -131,54 +134,23 @@ func drawText(_ image: NSImage, _ text: String) -> NSImage {
     im.addRepresentation(rep)
     im.lockFocus()
     image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
-    let txDrawHeight = isBigWindow ? font.pointSize*2 : image.size.height
-    text.draw(in: CGRect(x:  0, y: textPos-1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x:  0, y: textPos+1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x: -1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x:  1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
-    text.draw(in: CGRect(x:  0, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributes)
+    if isIcon {
+        text.draw(in: CGRect(
+            x: -image.size.height / 4,
+            y: -image.size.height * 0.4,
+            width:  image.size.width  + image.size.height*2/4,
+            height: image.size.height + image.size.height*2*0.4),
+            withAttributes: textFontAttributes)
+    } else {
+        let txDrawHeight = isBigWindow ? font.pointSize*2 : image.size.height
+        text.draw(in: CGRect(x:  0, y: textPos-1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+        text.draw(in: CGRect(x:  0, y: textPos+1, width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+        text.draw(in: CGRect(x: -1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+        text.draw(in: CGRect(x:  1, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributesBg)
+        text.draw(in: CGRect(x:  0, y: textPos  , width: image.size.width, height: txDrawHeight), withAttributes: textFontAttributes)
+    }
     im.unlockFocus()
     // TODO: dynamic window size: https://developer.apple.com/documentation/foundation/nsstring/1531844-size
-    return im
-}
-
-func drawIcon(_ image: NSImage, _ text: String) -> NSImage {
-    let font = NSFont.systemFont(ofSize: image.size.height*3/2, weight: .black)
-    let textStyle = NSParagraphStyle().mutableCopy() as! NSMutableParagraphStyle
-    textStyle.alignment = .center
-    textStyle.lineBreakMode = .byClipping
-    let shadow = NSShadow()
-    shadow.shadowOffset = NSMakeSize(0, 0)
-    shadow.shadowBlurRadius = image.size.height/20
-    shadow.shadowColor = BG
-    let textFontAttributes = [
-        NSAttributedString.Key.font: font,
-        NSAttributedString.Key.foregroundColor: FG,
-        NSAttributedString.Key.paragraphStyle: textStyle,
-        NSAttributedString.Key.shadow: shadow
-    ]
-    let im : NSImage = NSImage(size: image.size)
-    let rep : NSBitmapImageRep = NSBitmapImageRep(
-        bitmapDataPlanes: nil,
-        pixelsWide: Int(image.size.width),
-        pixelsHigh: Int(image.size.height),
-        bitsPerSample: 8,
-        samplesPerPixel: 4,
-        hasAlpha: true,
-        isPlanar: false,
-        colorSpaceName: NSColorSpaceName.calibratedRGB,
-        bytesPerRow: 0,
-        bitsPerPixel: 0)!
-    im.addRepresentation(rep)
-    im.lockFocus()
-    image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
-    text.draw(in: CGRect(
-        x: -image.size.height/4,
-        y: -image.size.height*0.4,
-        width: image.size.width + image.size.height*2/4,
-        height: image.size.height + image.size.height*2*0.4),
-        withAttributes: textFontAttributes)
-    im.unlockFocus()
     return im
 }
 
@@ -210,7 +182,7 @@ window.center()
 window.makeKeyAndOrderFront(nil)
 
 window.backgroundColor = NSColor(
-    patternImage: drawText(NSImage(
+    patternImage: drawOverImg(NSImage(
                     size:NSMakeSize(CGFloat(width), CGFloat(height)),
                     flipped: false,
                     drawingHandler: { (NSRect) -> Bool in
@@ -248,7 +220,7 @@ statusBarItem.menu = menu
 // about.messageText = "About"
 // about.informativeText = "MacOS Input Method Hinter\n\n© 2023 by Yury Ershov\n\nhttps://github.com/ershov/InputMethodHinter"
 // about.alertStyle = .informational
-// about.icon = drawText(NSImage(
+// about.icon = drawOverImg(NSImage(
 //                     size:NSMakeSize(128.0, 128.0),
 //                     flipped: false,
 //                     drawingHandler: { (NSRect) -> Bool in
