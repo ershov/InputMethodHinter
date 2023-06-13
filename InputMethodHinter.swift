@@ -9,6 +9,8 @@ import SwiftUI
 
 let version = "0.3.2"
 
+// MARK: - Check if accessibility is enabled
+
 let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: false as NSNumber]
 let accessibilityEnabled = AXIsProcessTrusted() || AXIsProcessTrustedWithOptions(options)
 if !accessibilityEnabled {
@@ -19,6 +21,8 @@ if !accessibilityEnabled {
 }
 
 //NSApplication.shared.setActivationPolicy(.accessory)
+
+// MARK: - Global variables
 
 var FG = NSColor.textColor
 var BG = NSColor.textBackgroundColor
@@ -59,6 +63,8 @@ func setSmallWindow() {
     BG3 = NSColor.selectedTextBackgroundColor
     animationDurationHold = 0.5
 }
+
+// MARK: - Image generation
 
 func genIndicationImage(_ inputMethod: String) -> NSImage {
     var image = NSImage(
@@ -142,118 +148,134 @@ func drawOverImg(_ image: NSImage, _ text: String, isIcon: Bool = false) -> NSIm
     return im
 }
 
-let window = NSWindow()
+// MARK: - Window funcs
 
-window.styleMask.insert(.fullSizeContentView)
-window.styleMask.insert(.borderless)
-window.styleMask.subtract(.closable)
-window.styleMask.subtract(.resizable)
-window.styleMask.subtract(.miniaturizable)
-window.titleVisibility = .hidden
-window.titlebarAppearsTransparent = true
-window.isMovableByWindowBackground = true
-window.isOpaque = false
-window.hasShadow = false
-window.level = .screenSaver
-window.ignoresMouseEvents = true  // click-through
-window.isRestorable = false
-window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-window.standardWindowButton(.closeButton)?.isHidden = true
-window.standardWindowButton(.zoomButton)?.isHidden = true
-window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-window.setContentSize(size)
-// window.minSize = size
-// window.maxSize = size
-let mouse = NSEvent.mouseLocation
-window.setFrame(CGRect(x: Int(mouse.x)-width, y: Int(mouse.y) - height/2, width: width, height: height), display: true)
-window.center()
-window.makeKeyAndOrderFront(nil)
+func createMainWindow() -> NSWindow {
+    let window = NSWindow()
 
-window.backgroundColor = NSColor(
-    patternImage: drawOverImg(NSImage(
-                    size:NSMakeSize(CGFloat(width), CGFloat(height)),
-                    flipped: false,
-                    drawingHandler: { (NSRect) -> Bool in
-                let context = NSGraphicsContext.current?.cgContext
-                context?.setFillColor(BG3.cgColor)
-                context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
-                return true
-            }
-        ), greetText))
-// Make it like a splash screen at startup
-window.alphaValue = 1.0
-NSAnimationContext.beginGrouping()
-NSAnimationContext.current.duration = 7
-window.animator().alphaValue = 0
-NSAnimationContext.endGrouping()
+    window.styleMask.insert(.fullSizeContentView)
+    window.styleMask.insert(.borderless)
+    window.styleMask.subtract(.closable)
+    window.styleMask.subtract(.resizable)
+    window.styleMask.subtract(.miniaturizable)
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
+    window.isMovableByWindowBackground = true
+    window.isOpaque = false
+    window.hasShadow = false
+    window.level = .screenSaver
+    window.ignoresMouseEvents = true  // click-through
+    window.isRestorable = false
+    window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    window.standardWindowButton(.closeButton)?.isHidden = true
+    window.standardWindowButton(.zoomButton)?.isHidden = true
+    window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    window.setContentSize(size)
+    // window.minSize = size
+    // window.maxSize = size
+    let mouse = NSEvent.mouseLocation
+    window.setFrame(CGRect(x: Int(mouse.x)-width, y: Int(mouse.y) - height/2, width: width, height: height), display: true)
+    window.center()
+    window.makeKeyAndOrderFront(nil)
 
-// https://stackoverflow.com/questions/64949572/how-to-create-status-bar-icon-and-menu-in-macos-using-swiftui
-let statusBarItem = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength))
-statusBarItem.button?.title = "️文"
-let menu = NSMenu()
-menu.autoenablesItems = false
-statusBarItem.menu = menu
+    window.backgroundColor = NSColor(
+        patternImage: drawOverImg(NSImage(
+                        size:NSMakeSize(CGFloat(width), CGFloat(height)),
+                        flipped: false,
+                        drawingHandler: { (NSRect) -> Bool in
+                    let context = NSGraphicsContext.current?.cgContext
+                    context?.setFillColor(BG3.cgColor)
+                    context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                    return true
+                }
+            ), greetText))
+    // Make it like a splash screen at startup
+    window.alphaValue = 1.0
+    NSAnimationContext.beginGrouping()
+    NSAnimationContext.current.duration = 7
+    window.animator().alphaValue = 0
+    NSAnimationContext.endGrouping()
 
-//// BUG:
-//// 1. Modal dialoig is neither getting focus nor popping above all windows.
-//// 2. Until the modal dialog is closed, the app's main thread is hanging.
-// class Alert: NSAlert { @objc func action() {
-//     NSApplication.shared.activate(ignoringOtherApps: true)
-//     self.window.makeKeyAndOrderFront(_: nil)
-//     self.runModal()
-//     self.window.resignKey()
-// }}
-// let about = Alert()
-// about.window.isRestorable = false
-// about.messageText = "About"
-// about.informativeText = "MacOS Input Method Hinter\n\n© 2023 by Yury Ershov\n\nhttps://github.com/ershov/InputMethodHinter"
-// about.alertStyle = .informational
-// about.icon = drawOverImg(NSImage(
-//                     size:NSMakeSize(128.0, 128.0),
-//                     flipped: false,
-//                     drawingHandler: { (NSRect) -> Bool in
-//                 let context = NSGraphicsContext.current?.cgContext
-//                 context?.setFillColor(BG3.cgColor)
-//                 context?.fill(CGRect(x: 0, y: 0, width: 128, height: 128))
-//                 return true
-//             }
-//         ), "文")
-// let aboutMenuItem = NSMenuItem(title: "About", action: #selector(about.action), keyEquivalent: "")
-// aboutMenuItem.target = about
-// menu.addItem(aboutMenuItem)
+    return window
+}
 
-//// Using "About" menu item instead of proper dialog window.
-class About { @objc func action() {
-    guard let url = URL(string: "https://github.com/ershov/InputMethodHinter") else { return }
-    NSWorkspace.shared.open(url)
-}}
-let about = About()
+let window = createMainWindow()
 
-let about2MenuItem = NSMenuItem(title: "About", action: #selector(about.action), keyEquivalent: "")
-about2MenuItem.target = about
-let aboutHtml = """
-    <style>* { font-family: Arial; text-align: center; } big { font-size: 50pt }</style>
-    <h2><big>文</big></h2>
-    <h2>About</h2>
-    <p>MacOS Input Method Hinter</p>
-    <p>© 2023 by Yury Ershov</p>
-    <p><a href='https://github.com/ershov/InputMethodHinter'>https://github.com/ershov/InputMethodHinter</a></p>
-    <p>Version \(version)</p>
-    """
-var dict: NSDictionary? = NSMutableDictionary()
-about2MenuItem.attributedTitle = try! NSAttributedString(
-    data: Data(bytes: UnsafePointer<Int8>((aboutHtml as NSString).utf8String)!, count: aboutHtml.data(using: .utf8)!.count),
-    options: [
-        NSAttributedString.DocumentReadingOptionKey.documentType: NSAttributedString.DocumentType.html,
-        NSAttributedString.DocumentReadingOptionKey.characterEncoding: String.Encoding.utf8.rawValue
-    ],
-    documentAttributes: &dict)
-menu.addItem(about2MenuItem)
+func createStatusBar() -> NSStatusItem {
+    // https://stackoverflow.com/questions/64949572/how-to-create-status-bar-icon-and-menu-in-macos-using-swiftui
+    let statusBarItem = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength))
+    statusBarItem.button?.title = "️文"
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    statusBarItem.menu = menu
 
-menu.addItem(NSMenuItem.separator())
+    //// FIXME:
+    //// 1. Modal dialoig is neither getting focus nor popping above all windows.
+    //// 2. Until the modal dialog is closed, the app's main thread is hanging.
+    // class Alert: NSAlert { @objc func action() {
+    //     NSApplication.shared.activate(ignoringOtherApps: true)
+    //     self.window.makeKeyAndOrderFront(_: nil)
+    //     self.runModal()
+    //     self.window.resignKey()
+    // }}
+    // let about = Alert()
+    // about.window.isRestorable = false
+    // about.messageText = "About"
+    // about.informativeText = "MacOS Input Method Hinter\n\n© 2023 by Yury Ershov\n\nhttps://github.com/ershov/InputMethodHinter"
+    // about.alertStyle = .informational
+    // about.icon = drawOverImg(NSImage(
+    //                     size:NSMakeSize(128.0, 128.0),
+    //                     flipped: false,
+    //                     drawingHandler: { (NSRect) -> Bool in
+    //                 let context = NSGraphicsContext.current?.cgContext
+    //                 context?.setFillColor(BG3.cgColor)
+    //                 context?.fill(CGRect(x: 0, y: 0, width: 128, height: 128))
+    //                 return true
+    //             }
+    //         ), "文")
+    // let aboutMenuItem = NSMenuItem(title: "About", action: #selector(about.action), keyEquivalent: "")
+    // aboutMenuItem.target = about
+    // menu.addItem(aboutMenuItem)
 
-let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
-menu.addItem(quitMenuItem)
+    //// Using "About" menu item instead of proper dialog window.
+    class About { @objc func action() {
+        guard let url = URL(string: "https://github.com/ershov/InputMethodHinter") else { return }
+        NSWorkspace.shared.open(url)
+    }}
+    let about = About()
+
+    let about2MenuItem = NSMenuItem(title: "About", action: #selector(about.action), keyEquivalent: "")
+    about2MenuItem.target = about
+    let aboutHtml = """
+        <style>* { font-family: Arial; text-align: center; } big { font-size: 50pt }</style>
+        <h2><big>文</big></h2>
+        <h2>About</h2>
+        <p>MacOS Input Method Hinter</p>
+        <p>© 2023 by Yury Ershov</p>
+        <p><a href='https://github.com/ershov/InputMethodHinter'>https://github.com/ershov/InputMethodHinter</a></p>
+        <p>Version \(version)</p>
+        """
+    var dict: NSDictionary? = NSMutableDictionary()
+    about2MenuItem.attributedTitle = try! NSAttributedString(
+        data: Data(bytes: UnsafePointer<Int8>((aboutHtml as NSString).utf8String)!, count: aboutHtml.data(using: .utf8)!.count),
+        options: [
+            NSAttributedString.DocumentReadingOptionKey.documentType: NSAttributedString.DocumentType.html,
+            NSAttributedString.DocumentReadingOptionKey.characterEncoding: String.Encoding.utf8.rawValue
+        ],
+        documentAttributes: &dict)
+    menu.addItem(about2MenuItem)
+
+    menu.addItem(NSMenuItem.separator())
+
+    let quitMenuItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+    menu.addItem(quitMenuItem)
+
+    return statusBarItem
+}
+
+let statusBarItem = createStatusBar()
+
+// MARK: - Animation
 
 var animationDurationHold = 0.5
 let animationDurationFade = 1.5
@@ -295,6 +317,8 @@ func animateWindow() {
     window.alphaValue = 1.0
     animateWindow1()
 }
+
+// MARK: - Global events
 
 extension NSEvent {
     func isKeyboardEvent() -> Bool {
@@ -368,9 +392,9 @@ let monitor = NSEvent.addGlobalMonitorForEvents(matching: [
 
 
 
+// MARK: - Helper functions
 
 
-///////////////////////////////////////////////////////////////////////////////
 
 func getCurrentInputSource() -> String {
     guard let inputSourceUnmanaged = TISCopyCurrentKeyboardInputSource() else { return "" }
@@ -454,6 +478,8 @@ func getActiveWindowCoord() -> NSPoint? {
     if !CGRectMakeWithDictionaryRepresentation(visibleWindows[0]["kCGWindowBounds"] as! CFDictionary, &bounds) { return nil }
     return cocoaScreenPoint(fromCarbonScreenPoint: NSPoint(x: bounds.midX, y: bounds.midY))
 }
+
+// MARK: - Input method icons
 
 let im2icon: [String: String] = [
     "com.apple.keylayout.Czech-QWERTY": "🇨🇿",
@@ -739,7 +765,7 @@ let im2icon: [String: String] = [
 
 
 
-
+// MARK: - Main
 
 
 
