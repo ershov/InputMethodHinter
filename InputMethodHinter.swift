@@ -11,13 +11,15 @@ let version = "0.3.2"
 
 // MARK: - Check if accessibility is enabled
 
-let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: false as NSNumber]
-let accessibilityEnabled = AXIsProcessTrusted() || AXIsProcessTrustedWithOptions(options)
-if !accessibilityEnabled {
-    let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    // let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
-    NSWorkspace.shared.open(URL(string: urlString)!)
-    // exit(0)
+func checkAccessibilityEnabled() {
+    let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: false as NSNumber]
+    let accessibilityEnabled = AXIsProcessTrusted() || AXIsProcessTrustedWithOptions(options)
+    if !accessibilityEnabled {
+        let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        // let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+        NSWorkspace.shared.open(URL(string: urlString)!)
+        // exit(0)
+    }
 }
 
 //NSApplication.shared.setActivationPolicy(.accessory)
@@ -199,8 +201,6 @@ func createMainWindow() -> NSWindow {
     return window
 }
 
-let window = createMainWindow()
-
 func createStatusBar() -> NSStatusItem {
     // https://stackoverflow.com/questions/64949572/how-to-create-status-bar-icon-and-menu-in-macos-using-swiftui
     let statusBarItem = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength))
@@ -273,8 +273,6 @@ func createStatusBar() -> NSStatusItem {
     return statusBarItem
 }
 
-let statusBarItem = createStatusBar()
-
 // MARK: - Animation
 
 class Animation {
@@ -320,8 +318,6 @@ class Animation {
         self.animateWindow1()
     }
 }
-
-let animation = Animation()
 
 // MARK: - Global events
 
@@ -401,13 +397,7 @@ class EventHandler {
     }
 }
 
-let eventHandler = EventHandler()
-eventHandler.start()
-
-
 // MARK: - Helper functions
-
-
 
 func getCurrentInputSource() -> String {
     guard let inputSourceUnmanaged = TISCopyCurrentKeyboardInputSource() else { return "" }
@@ -776,12 +766,13 @@ let im2icon: [String: String] = [
     "com.apple.inputmethod.TCIM.Shuangpin": "🇹🇼",
 ]
 
-
-
 // MARK: - Main
 
-
-
-
+checkAccessibilityEnabled()
+let window = createMainWindow()
+let statusBarItem = createStatusBar()
+let animation = Animation()
+let eventHandler = EventHandler()
+eventHandler.start()
 let app = NSApplication.shared
 app.run()
