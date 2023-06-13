@@ -47,7 +47,7 @@ func setBigWindow() {
     BG = NSColor.black
     BG2 = NSColor.windowBackgroundColor
     BG3 = NSColor.selectedTextBackgroundColor
-    animationDurationHold = 0.1
+    animation.animationDurationHold = 0.1
 }
 
 func setSmallWindow() {
@@ -61,7 +61,7 @@ func setSmallWindow() {
     BG = NSColor.textBackgroundColor
     BG2 = NSColor.windowBackgroundColor
     BG3 = NSColor.selectedTextBackgroundColor
-    animationDurationHold = 0.5
+    animation.animationDurationHold = 0.5
 }
 
 // MARK: - Image generation
@@ -277,46 +277,51 @@ let statusBarItem = createStatusBar()
 
 // MARK: - Animation
 
-var animationDurationHold = 0.5
-let animationDurationFade = 1.5
+class Animation {
+    var animationDurationHold = 0.5
+    let animationDurationFade = 1.5
+    var animTimer : DispatchSourceTimer?
 
-var animTimer : DispatchSourceTimer?
-func setTimeout(_ delay: Double, _ closure: @escaping () -> Void) {
-    cancelTimeout()
-    animTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-    guard let timer = animTimer else { animTimer = nil; return }
-    timer.setEventHandler {
-        closure()
+    func setTimeout(_ delay: Double, _ closure: @escaping () -> Void) {
+        self.cancelTimeout()
+        self.animTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        guard let timer = self.animTimer else { self.animTimer = nil; return }
+        timer.setEventHandler {
+            closure()
+        }
+        timer.schedule(deadline: .now() + delay, repeating: .never)
+        timer.resume()
     }
-    timer.schedule(deadline: .now() + delay, repeating: .never)
-    timer.resume()
-}
-func cancelTimeout() {
-    animTimer?.cancel()
-    animTimer = nil
-}
 
-func animateWindow1() {
-    setTimeout(animationDurationHold) {
+    func cancelTimeout() {
+        self.animTimer?.cancel()
+        self.animTimer = nil
+    }
+
+    func animateWindow1() {
+        self.setTimeout(self.animationDurationHold) {
+            window.alphaValue = 1.0
+            NSAnimationContext.beginGrouping()
+            NSAnimationContext.current.duration = self.animationDurationFade
+            window.animator().alphaValue = 0
+            NSAnimationContext.endGrouping()
+            self.animateWindow2()
+        }
+    }
+    func animateWindow2() {
+        self.setTimeout(self.animationDurationFade) {
+            window.center()
+            self.cancelTimeout()
+        }
+    }
+
+    func animateWindow() {
         window.alphaValue = 1.0
-        NSAnimationContext.beginGrouping()
-        NSAnimationContext.current.duration = animationDurationFade
-        window.animator().alphaValue = 0
-        NSAnimationContext.endGrouping()
-        animateWindow2()
-    }
-}
-func animateWindow2() {
-    setTimeout(animationDurationFade) {
-        window.center()
-        cancelTimeout()
+        self.animateWindow1()
     }
 }
 
-func animateWindow() {
-    window.alphaValue = 1.0
-    animateWindow1()
-}
+let animation = Animation()
 
 // MARK: - Global events
 
@@ -326,70 +331,78 @@ extension NSEvent {
     }
 }
 
-// https://github.com/ghawkgu/isHUD/blob/master/isHUD/ISHKeyCode.h
-var inputMethod = ""
-var activeWindow = ""
-var maxKeysPressed: UInt = 0
-let modifiersMask: UInt = (NSEvent.ModifierFlags.capsLock.rawValue | NSEvent.ModifierFlags.shift.rawValue | NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue | NSEvent.ModifierFlags.command.rawValue | NSEvent.ModifierFlags.numericPad.rawValue | NSEvent.ModifierFlags.help.rawValue | NSEvent.ModifierFlags.function.rawValue | NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue)
-let interestingKeysMask: UInt = (NSEvent.ModifierFlags.capsLock.rawValue | NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue | NSEvent.ModifierFlags.command.rawValue | NSEvent.ModifierFlags.function.rawValue)
-let forceIndicationKeys: UInt = (NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.function.rawValue)
-func onEvent(_ event: NSEvent) {
-    // if event.isARepeat { return }
-    var userRequestedIndication = false
-    if event.type == .flagsChanged {
-        let keyMask: UInt = event.modifierFlags.rawValue & NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue // modifiersMask
-        maxKeysPressed |= keyMask
-        if keyMask != 0 { return }
-        // All keys released
-        let lastMaxKeysPressed = maxKeysPressed
-        maxKeysPressed = 0
-        // Fn+Ctrl forces indication
-        userRequestedIndication = lastMaxKeysPressed == forceIndicationKeys
-        // Any of interesting keys were pressed?
-        if ((lastMaxKeysPressed & interestingKeysMask) == 0) && !userRequestedIndication { return }
+class EventHandler {
+    // https://github.com/ghawkgu/isHUD/blob/master/isHUD/ISHKeyCode.h
+    var inputMethod = ""
+    var activeWindow = ""
+    var maxKeysPressed: UInt = 0
+    static let modifiersMask: UInt = (NSEvent.ModifierFlags.capsLock.rawValue | NSEvent.ModifierFlags.shift.rawValue | NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue | NSEvent.ModifierFlags.command.rawValue | NSEvent.ModifierFlags.numericPad.rawValue | NSEvent.ModifierFlags.help.rawValue | NSEvent.ModifierFlags.function.rawValue | NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue)
+    static let interestingKeysMask: UInt = (NSEvent.ModifierFlags.capsLock.rawValue | NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue | NSEvent.ModifierFlags.command.rawValue | NSEvent.ModifierFlags.function.rawValue)
+    static let forceIndicationKeys: UInt = (NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.function.rawValue)
+    var monitor: Any?
+
+    func start() {
+        self.monitor = NSEvent.addGlobalMonitorForEvents(matching: [
+                .leftMouseUp,
+                .rightMouseUp,
+                .otherMouseUp,
+                .flagsChanged]) { (event: NSEvent) in
+            self.onEvent(event)
+        }
     }
-    // Wait for windows to activate and input method to switch
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-        let lastInputMethod = inputMethod;         inputMethod = getCurrentInputSource()
-        let lastActiveWindow = activeWindow;       activeWindow = "\(getActiveWindowId()) \(isActiveTextInput())"
-        if !userRequestedIndication && lastInputMethod == inputMethod{
-            if !isActiveTextInput() { return }
-            if lastActiveWindow == activeWindow { return }
-        }
 
-        if event.isKeyboardEvent() {
-            setBigWindow()
-        } else {
-            setSmallWindow()
+    func onEvent(_ event: NSEvent) {
+        // if event.isARepeat { return }
+        var userRequestedIndication = false
+        if event.type == .flagsChanged {
+            let keyMask: UInt = event.modifierFlags.rawValue & NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue // modifiersMask
+            self.maxKeysPressed |= keyMask
+            if keyMask != 0 { return }
+            // All keys released
+            let lastMaxKeysPressed = self.maxKeysPressed
+            self.maxKeysPressed = 0
+            // Fn+Ctrl forces indication
+            userRequestedIndication = lastMaxKeysPressed == EventHandler.forceIndicationKeys
+            // Any of interesting keys were pressed?
+            if ((lastMaxKeysPressed & EventHandler.interestingKeysMask) == 0) && !userRequestedIndication { return }
         }
-
-        let pos = {() -> NSPoint in
-            if event.isKeyboardEvent(), let winPos = getActiveWindowCoord() {
-                return NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2)
-            } else {
-                var pos = getNextWindowPos()
-                pos.x += 10.0
-                pos.y += CGFloat(height/2)
-                return cocoaScreenPoint(fromCarbonScreenPoint: pos)
+        // Wait for windows to activate and input method to switch
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            let lastInputMethod = self.inputMethod;         self.inputMethod = getCurrentInputSource()
+            let lastActiveWindow = self.activeWindow;       self.activeWindow = "\(getActiveWindowId()) \(isActiveTextInput())"
+            if !userRequestedIndication && lastInputMethod == self.inputMethod {
+                if !isActiveTextInput() { return }
+                if lastActiveWindow == self.activeWindow { return }
             }
-        }()
-        //window.setFrameOrigin(pos)
-        window.setFrame(NSRect(x: Int(pos.x), y: Int(pos.y), width: width, height: height), display: true)
 
-        window.backgroundColor = NSColor(patternImage: genIndicationImage(inputMethod))
+            if event.isKeyboardEvent() {
+                setBigWindow()
+            } else {
+                setSmallWindow()
+            }
 
-        animateWindow()
+            let pos = {() -> NSPoint in
+                if event.isKeyboardEvent(), let winPos = getActiveWindowCoord() {
+                    return NSPoint(x: winPos.x - window.frame.width / 2, y: winPos.y - window.frame.height / 2)
+                } else {
+                    var pos = getNextWindowPos()
+                    pos.x += 10.0
+                    pos.y += CGFloat(height/2)
+                    return cocoaScreenPoint(fromCarbonScreenPoint: pos)
+                }
+            }()
+            //window.setFrameOrigin(pos)
+            window.setFrame(NSRect(x: Int(pos.x), y: Int(pos.y), width: width, height: height), display: true)
+
+            window.backgroundColor = NSColor(patternImage: genIndicationImage(self.inputMethod))
+
+            animation.animateWindow()
+        }
     }
 }
 
-let monitor = NSEvent.addGlobalMonitorForEvents(matching: [
-        .leftMouseUp,
-        .rightMouseUp,
-        .otherMouseUp,
-        .flagsChanged]) { (event: NSEvent) in
-    onEvent(event)
-}
-
+let eventHandler = EventHandler()
+eventHandler.start()
 
 
 // MARK: - Helper functions
