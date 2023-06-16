@@ -42,6 +42,7 @@ app: $(BINARIES)
 	codesign -fs codesign --deep InputMethodHinter.app/Contents/MacOS/InputMethodHinter-console  # have to do it after adding rpath
 	codesign -fs codesign InputMethodHinter.app  # --deep?
 	#codesign -dvv --req - InputMethodHinter.app
+	touch InputMethodHinter.app
 
 zip: app
 	rm -f InputMethodHinter.zip; zip -qr InputMethodHinter.zip InputMethodHinter.app
